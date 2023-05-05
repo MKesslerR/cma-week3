@@ -53,10 +53,43 @@ ggplot(sabi, aes(stepMean))+
   
 sabi |> 
   mutate(static = stepMean < mean(stepMean, na.rm = TRUE))|>
-  ggplot(aes(E, N)+
+  ggplot(aes(E, N))+
   geom_path()+
-    geom_point(aes(color = static)+
-                 coord_fixed())
-    )
+    geom_point(aes(color = static))+
+                 coord_fixed()
+    
 ```
+with posmo data
+
+
+```{r}
+library("readr")
+library("sf")
+
+posmo_K <- read_delim("Data/posmo_data.csv")
+head(posmo_K)
+posmo_K <- select(posmo, datetime, lon_x, lat_y)
+
+
+posmo_K <- st_as_sf(posmo_K,
+    coords = c("lon_x", "lat_y"),
+    crs = 4326
+)#transforms the data frame into a sf object
+posmo_K
+posmo_K <- st_transform(posmo_K, 2056)#convert the coordinate system to CH1903+ LV95: EPSG:2056
+
+#To be able to compute euclidean distances by hand, we need the coordinates stored in separate columns. The function st_coordinates extracts the coordinates from our sf object. 
+posmoK_coordinates <- st_coordinates(posmo_K)
+
+#We can bind these coordinates back to our sf object using cbind
+posmo <- cbind(posmo, posmoK_coordinates)
+
+#Explore your data and choose a single day for the next steps.
+unique(posmo$datetime)
+
+posmo_filter <- posmo |>
+    filter(as.Date(datetime) == "2023-03-21")
+ 
+```
+
 
