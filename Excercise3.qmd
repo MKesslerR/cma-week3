@@ -94,6 +94,7 @@ posmo_filter <- posmo |>
 #Task1. Segmentation
 
 ```{r}
+#StepB
 posmo_segmented <- posmo_filter |>
     mutate(
       n_plus1 = sqrt ((lead(X, 1) - X)^2 + (lead(Y, 1)-Y)^2), #steplenght 1
@@ -102,12 +103,22 @@ posmo_segmented <- posmo_filter |>
       nMinus2 = sqrt((lag(X, 2) - X)^2 + (lag(Y, 2) - Y)^2)# steplenght 2 backward
 )
 
- posmo  |>
+ posmo_segmented <- posmo_segmented  |>
     rowwise() |>
     mutate(
         stepMean = mean(c(nMinus2, nMinus1, n_plus1, n_plus2))
     ) |>
     ungroup()# to undo the grouping by row
+posmo_segmented
+
+#StepC: Remove static points
+
+posmo_segmented |> 
+  mutate(static = stepMean < mean(stepMean, na.rm = TRUE))|>
+  ggplot(aes(X, Y))+
+  geom_path()+
+    geom_point(aes(color = static))+
+                 coord_fixed()
 
 ```
 
