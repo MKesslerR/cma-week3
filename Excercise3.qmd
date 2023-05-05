@@ -106,19 +106,19 @@ posmo_segmented <- posmo_filter |>
  posmo_segmented <- posmo_segmented  |>
     rowwise() |>
     mutate(
-        stepMean = mean(c(nMinus2, nMinus1, n_plus1, n_plus2))
+        stepMean = mean(c(nMinus2, nMinus1, n_plus1, n_plus2))#new column with the average step-lenght among the 4 measures
     ) |>
     ungroup()# to undo the grouping by row
 posmo_segmented
 
-#StepC: Remove static points
-
+#Task 3 and 4. Remove static points by applying threshold and visualize the segmented trajectories
 posmo_segmented |> 
-  mutate(static = stepMean < mean(stepMean, na.rm = TRUE))|>
-  ggplot(aes(X, Y))+
+  mutate(static = stepMean < mean(stepMean, na.rm = TRUE))|> #create a new column static with specifying a threshold, in this exercise, we use the mean of all stepMean values.
+ggplot(aes(X, Y))+
   geom_path()+
     geom_point(aes(color = static))+
                  coord_fixed()
+
 
 ```
 
