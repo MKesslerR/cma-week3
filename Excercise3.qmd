@@ -73,8 +73,7 @@ posmo_K <- select(posmo_K, datetime, lon_x, lat_y)#To select only this three col
 
 posmo_K <- st_as_sf(posmo_K,
     coords = c("lon_x", "lat_y"),
-    crs = 4326
-)#transforms the data frame into a sf object
+    crs = 4326)#transforms the data frame into a sf object
 posmo_K
 posmo_K <- st_transform(posmo_K, 2056)#convert the coordinate system to CH1903+ LV95: EPSG:2056
 
@@ -95,7 +94,7 @@ posmo_filter <- posmo |>
 
 ```{r}
 #StepB
-posmo_segmented <- posmo_filter |>
+posmo_filter <- posmo_filter |>
     mutate(
       n_plus1 = sqrt ((lead(X, 1) - X)^2 + (lead(Y, 1)-Y)^2), #steplenght 1
       n_plus2 = sqrt ((lead(X, 2) - X)^2 + (lead(Y, 2)-Y)^2),#steplenght2 forward
@@ -103,23 +102,87 @@ posmo_segmented <- posmo_filter |>
       nMinus2 = sqrt((lag(X, 2) - X)^2 + (lag(Y, 2) - Y)^2)# steplenght 2 backward
 )
 
- posmo_segmented <- posmo_segmented  |>
+ posmo_filter <- posmo_filter  |>
     rowwise() |>
     mutate(
         stepMean = mean(c(nMinus2, nMinus1, n_plus1, n_plus2))#new column with the average step-lenght among the 4 measures
     ) |>
     ungroup()# to undo the grouping by row
-posmo_segmented
+posmo_filter
 
 #Task 3 and 4. Remove static points by applying threshold and visualize the segmented trajectories
-posmo_segmented |> 
-  mutate(static = stepMean < mean(stepMean, na.rm = TRUE))|> #create a new column static with specifying a threshold, in this exercise, we use the mean of all stepMean values.
-ggplot(aes(X, Y))+
+posmo_filter <- posmo_filter |> 
+  mutate(static = stepMean < mean(stepMean, na.rm = TRUE))
+
+#create a new column static with specifying a threshold, in this exercise, we use the mean of all stepMean values.
+ggplot(posmo_filter, aes(X, Y))+
   geom_path()+
     geom_point(aes(color = static))+
                  coord_fixed()
 
-
 ```
 
+#Task 4: Segment-based analysis. we need a unique ID for each segment that we can use as a grouping variable.
+```{r}
+#function to create a unique ID for each segment
+rle_id <- function(vec) {
+    x <- rle(vec)$lengths
+    as.factor(rep(seq_along(x), times = x))
+}
 
+posmo_filter <- posmo_filter |>
+    mutate(segment_id = rle_id(static))#to apply the previous function with the posmo_filter data set and add a new column called segment_id to assign unique IDs to sub-trajectories 
+
+head(posmo_filter)
+
+```
+Visualize the moving segments by coloring them by segment_ID. Then use segment_ID as a grouping variable to determine the segments duration and remove short segments (e.g. segments with a duration < 5 Minutes)
+```{r}
+ggplot(posmo_filter, aes(X, Y))+
+  geom_path(aes(color = segment_id))+
+   coord_fixed()#only the trajectories
+
+p<- ggplot(posmo_filter, aes(X, Y))+
+  geom_path()+
+  geom_point(aes(color = segment_id))+
+  coord_fixed()
+     #ggtitle("Moving segments colored by segment ID") +
+                 #with points 
+    
+p <- p + labs(title = "Moving segments colored by segment ID") 
+p
+```
+ 
+ 
+```{r}
+posmo_onlymoves <- posmo_filter |>   
+  filter(static == FALSE)#filters out stops and leaves only moves
+
+posmo_onlymoves <- mutate(posmo_onlymoves, timelag = as.numeric(difftime(lead(datetime), datetime)))#add a new column with the time lag per sub trajectory
+ colnames()
+
+segments <- posmo_onlymoves|>
+  group_by(segment_id) |> 
+  filter(timelag > 5)
+
+ 
+ ggplot(segments, aes(X, Y))+
+  geom_path(aes(color = segment_id))+
+   coord_fixed()
+ 
+ q <- ggplot(segments, aes(X, Y))+
+  geom_path()+
+    geom_point(aes(color = segment_id))+
+                 coord_fixed()#with points
+ 
+ q <- p + labs(title = "Long segments (removed segments <5min")
+ q
+```
+```{r}
+library(cowplot)
+plot_grid(p, q, labels = NULL, nrow = 2)
+```
+ 
+ 
+```
+plot_grid(p1, p2, labels = c('A', 'B'), label_size = 12)
