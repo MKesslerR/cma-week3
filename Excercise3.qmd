@@ -183,6 +183,22 @@ library(cowplot)
 plot_grid(p, q, labels = NULL, nrow = 2)
 ```
  
- 
+#Task5
+
+```{r}
+pedestrian <- read_delim("Data/pedestrian.csv", ",")#Load data
+
+str(pedestrian)
+pedestrian$TrajID <- as.factor(pedestrian$TrajID)
+
+ggplot(pedestrian, aes(E, N))+
+  geom_point(aes(color = TrajID))+
+  facet_wrap(~ TrajID, nrow = 2)+
+  geom_path(aes(color = TrajID))+
+  theme_minimal()+
+ theme(axis.text.x = element_text(angle = 90), legend.position = NULL)
+
 ```
-plot_grid(p1, p2, labels = c('A', 'B'), label_size = 12)
+
+
+
