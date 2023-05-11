@@ -63,8 +63,10 @@ sabi |>
 
 
 ```{r}
-library("readr")
-library("sf")
+library(readr)
+library(sf)
+library(dplyr)
+library(ggplot2)
 
 posmo_K <- read_delim("Data/posmo_data.csv")
 head(posmo_K)
@@ -159,7 +161,7 @@ posmo_onlymoves <- posmo_filter |>
   filter(static == FALSE)#filters out stops and leaves only moves
 
 posmo_onlymoves <- mutate(posmo_onlymoves, timelag = as.numeric(difftime(lead(datetime), datetime)))#add a new column with the time lag per sub trajectory
- colnames()
+ colnames(posmo_onlymoves)
 
 segments <- posmo_onlymoves|>
   group_by(segment_id) |> 
@@ -178,18 +180,19 @@ segments <- posmo_onlymoves|>
  q <- p + labs(title = "Long segments (removed segments <5min")
  q
 ```
+
 ```{r}
 library(cowplot)
 plot_grid(p, q, labels = NULL, nrow = 2)
 ```
  
-#Task5
+#Task5. Explore the trajectories first and get an idea on how the pedestrians moved
 
 ```{r}
 pedestrian <- read_delim("Data/pedestrian.csv", ",")#Load data
 
 str(pedestrian)
-pedestrian$TrajID <- as.factor(pedestrian$TrajID)
+pedestrian$TrajID <- as.factor(pedestrian$TrajID)#Covert TrailID to factor
 
 ggplot(pedestrian, aes(E, N))+
   geom_point(aes(color = TrajID))+
@@ -200,5 +203,108 @@ ggplot(pedestrian, aes(E, N))+
 
 ```
 
+#Task6. Calculate similarity
 
+```{r}
+install.packages("SimilarityMeasures")
+help(package = "SimilarityMeasures")
+```
+Which two trajectories to you perceive to be most similar, which are most dissimilar? 1 and 6are the most similar, and 2 and 4 the most dissimilar. 
+
+Create 6 different matrices one, for each trajectory
+```{r}
+#
+
+Traj1 <- pedestrian |> 
+  filter(TrajID == 1)|>
+  mutate(Datetime_int = as.integer(DatetimeUTC))|>#creates  new column with date and time as integers
+  select(c(E, N, Datetime_int))#select E, N and the newly created Datetime as integer
+
+Traj1 <- as.matrix(Traj1)
+#data.matrix(frame, rownames.force = NA)
+
+Traj2 <- pedestrian |> 
+  filter(TrajID == 2)|>
+  mutate(Datetime_int = as.integer(DatetimeUTC))|>
+  select(c(E, N, Datetime_int))
+
+Traj2 <- as.matrix(Traj2)
+
+Traj3 <- pedestrian |> 
+  filter(TrajID == 3)|>
+  mutate(Datetime_int = as.integer(DatetimeUTC))|>
+  select(c(E, N, Datetime_int))
+
+Traj3 <- as.matrix(Traj3)
+
+Traj4 <- pedestrian |> 
+  filter(TrajID == 4)|>
+  mutate(Datetime_int = as.integer(DatetimeUTC))|>
+  select(c(E, N, Datetime_int))
+
+Traj4 <- as.matrix(Traj4)
+
+Traj5 <- pedestrian |> 
+  filter(TrajID == 5)|>
+  mutate(Datetime_int = as.integer(DatetimeUTC))|>
+  select(c(E, N, Datetime_int))
+
+Traj5 <- as.matrix(Traj5)
+
+Traj6 <- pedestrian |> 
+  filter(TrajID == 6)|>
+  mutate(Datetime_int = as.integer(DatetimeUTC))|>
+  select(c(E, N, Datetime_int))
+
+Traj6 <- as.matrix(Traj6)
+```
+DTW: A function to calculate the dynamic time warping value between two trajectories.
+```{r}
+library(SimilarityMeasures)
+DTW(Traj1, Traj2)
+DTW(Traj1, Traj3)
+DTW(Traj1, Traj4)
+DTW(Traj1, Traj5)
+DTW(Traj1, Traj6)
+
+```
+
+EditDist
+```{r}
+EditDist(Traj1, Traj2)
+EditDist(Traj1, Traj3)
+EditDist(Traj1, Traj4)
+EditDist(Traj1, Traj5)
+EditDist(Traj1, Traj6)
+```
+
+Frechet
+
+```{r}
+Frechet(Traj1, Traj2)
+Frechet(Traj1, Traj3)
+Frechet(Traj1, Traj4)
+Frechet(Traj1, Traj5)
+Frechet(Traj1, Traj6)
+```
+
+LCSS
+```{r}
+LCSS(Traj1, Traj2, 2, 2, 0.5)
+LCSS(Traj1, Traj3, 2, 2, 0.5)
+LCSS(Traj1, Traj4, 2, 2, 0.5)
+LCSS(Traj1, Traj5, 2, 2, 0.5)
+LCSS(Traj1, Traj6, 2, 2, 0.5)
+```
+Plot the results
+```{r}
+similarity <- posmo_K <- read_delim("Data/similarity.csv")
+head(similarity)
+
+
+ggplot(similarity, aes(Traj, Similarity))+
+  geom_col(aes(fill = Traj))+
+  facet_wrap(~ SimMeas, nrow = 2, scales = "free")
+  
+```
 
